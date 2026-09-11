@@ -1,0 +1,11 @@
+{
+  "name": "cicd-lab",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node app.js",
+    "lint": "node --check math.js && node --check app.js && node --check build.js",
+    "test": "node --test",
+    "build": "node build.js"
+  }
+}

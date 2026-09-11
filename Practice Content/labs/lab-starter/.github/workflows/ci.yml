@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [ '20', '22', '24' ]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - run: npm run lint
+      - run: npm test
+
+  build:
+    needs: test            # runs only if the tests passed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm run build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: my-app
+          path: dist/
+
+  image:
+    needs: build           # only package code that tested and built cleanly
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the image
+        run: docker build -t cicd-lab:ci .
+
+      # Tests prove the code works. This proves the packaged container works.
+      - name: Smoke test the image
+        run: |
+          docker run -d --name smoke -p 3000:3000 cicd-lab:ci
+          for i in $(seq 1 10); do
+            if curl -fs http://localhost:3000/health; then
+              echo "container is healthy"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "container never answered /health"
+          docker logs smoke
+          exit 1
+
+      - name: Remove the test container
+        if: always()
+        run: docker rm -f smoke

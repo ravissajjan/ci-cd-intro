@@ -1,0 +1,86 @@
+name: CD
+
+# One delivery pipeline, chained to CI. Nothing here runs unless CI went green on main.
+on:
+  workflow_run:
+    workflows: [ "CI" ]
+    types: [ completed ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cd
+  cancel-in-progress: false
+
+jobs:
+  # The single decision point: is this commit allowed to ship at all?
+  gate:
+    # "completed" also fires when CI FAILED, and for CI runs on pull requests.
+    # Both checks matter: only a green run, only on main, ever gets past here.
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch' ||
+          (github.event.workflow_run.conclusion == 'success' &&
+           github.event.workflow_run.head_branch == 'main') }}
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.commit.outputs.sha }}
+    steps:
+      # workflow_run starts on the default branch, so we must name the commit CI actually tested.
+      - id: commit
+        run: echo "sha=${{ github.event.workflow_run.head_sha || github.sha }}" >> "$GITHUB_OUTPUT"
+
+  publish-image:
+    needs: gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/cicd-lab:${{ needs.gate.outputs.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/cicd-lab:latest
+
+  # Deliberately parallel to publish-image, not after it, so Lab 4 works
+  # even if you have not finished Lab 3D and set the Docker Hub secrets.
+  staging:
+    needs: gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+      - run: npm run build
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true       # switches Pages on if Settings -> Pages was never touched
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
+  production:
+    needs: [ gate, staging ]     # gate is listed so we can read its sha output
+    runs-on: ubuntu-latest
+    environment: production      # add a Required reviewer here to pause for approval
+    steps:
+      - run: echo "Deploying ${{ needs.gate.outputs.sha }} to production..."
