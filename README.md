@@ -41,7 +41,7 @@ labs reach it — the goal is to understand a pipeline and watch it catch a real
 ## 3. During the class
 
 Follow **[Unit2-Student-Lab-Handout.md](Unit2-Student-Lab-Handout.md)** — Labs 0 to 4, with a
-checkbox for every step. Tick them as you go and raise your hand at each ✅ CHECKPOINT.
+checkbox for every step. Tick them as you go and raise your hand at each CHECKPOINT.
 
 | Lab | You will build |
 |---|---|
