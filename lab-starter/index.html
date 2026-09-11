@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CI/CD Lab</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 40px; }
+    input, select, button { font-size: 16px; padding: 6px; }
+    #result { font-size: 22px; margin-top: 20px; color: green; }
+  </style>
+</head>
+<body>
+
+  <h1>CI/CD Lab</h1>
+  <p>This page was deployed by a pipeline, not by a human.</p>
+
+  <input id="a" type="number" value="7" />
+  <select id="op">
+    <option value="+">+</option>
+    <option value="-">-</option>
+    <option value="*">*</option>
+    <option value="/">/</option>
+  </select>
+  <input id="b" type="number" value="5" />
+  <button onclick="calculate()">Calculate</button>
+
+  <div id="result"></div>
+
+  <script>
+    function calculate() {
+      const a = Number(document.getElementById('a').value);
+      const b = Number(document.getElementById('b').value);
+      const op = document.getElementById('op').value;
+
+      let answer;
+      if (op === '+') answer = a + b;
+      if (op === '-') answer = a - b;
+      if (op === '*') answer = a * b;
+      if (op === '/') answer = b === 0 ? 'Cannot divide by zero' : a / b;
+
+      document.getElementById('result').textContent = 'Result: ' + answer;
+    }
+  </script>
+
+</body>
+</html>
