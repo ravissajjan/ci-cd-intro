@@ -6,3 +6,4 @@ dist/
 npm-debug.log*
 coverage/
 .env
+#changes made for the pull request
